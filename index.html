@@ -32,6 +32,9 @@ ul{list-style:none;margin:0;padding:0}
 .oh{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .mut{color:var(--mut);font-size:13px}
 .msg{font-size:14px;margin-top:8px}
+.qr{margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.qr img{max-width:260px;width:100%;height:auto;border-radius:10px;background:#fff;padding:6px}
+.qr p{margin:6px 0 0}
 .wrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14px}
 td{padding:4px 0;border-bottom:1px dashed var(--line)}
@@ -59,6 +62,17 @@ td:last-child{text-align:right}
 </div>
 <ul class="cart" id="cart"></ul>
 <div class="tot"><span>Total</span><span id="ctot">Rp0</span></div>
+<label for="bayar">Metode pembayaran</label>
+<select id="bayar">
+<option value="QRIS">QRIS</option>
+<option value="Tunai">Tunai (bayar saat ambil)</option>
+</select>
+<div class="qr" id="qris">
+<img id="qimg" src="qris.png" alt="QRIS Ngemil Wak">
+<p id="qmiss" class="mut" hidden>Gambar QRIS belum tersedia. Minta QRIS lewat WhatsApp.</p>
+<p><strong id="qtot">Rp0</strong></p>
+<p class="mut">Scan QRIS, isi nominal sesuai total, lalu kirim bukti bayar lewat WhatsApp.</p>
+</div>
 <div style="display:grid;gap:8px;margin-top:12px">
 <button class="p" id="send" type="button" hidden>Kirim pesanan</button>
 <button class="p" id="wa" type="button">Kirim pesanan lewat WhatsApp</button>
@@ -116,7 +130,12 @@ function renderCart(){
     li.append(a,b); ul.appendChild(li);
   });
   $("ctot").textContent = fmt(sum(cart));
+  $("qtot").textContent = "Total bayar: " + fmt(sum(cart));
 }
+function showQris(){ $("qris").hidden = $("bayar").value !== "QRIS"; }
+$("bayar").addEventListener("change", showQris);
+$("qimg").addEventListener("error", ()=>{ $("qimg").hidden = true; $("qmiss").hidden = false; });
+showQris();
 $("add").onclick = ()=>{
   const item=$("prod").value, m=MENU[item];
   const rasa = m.rasa ? $("rasa").value : "", opt = m.opt ? $("opt").value : "";
@@ -138,7 +157,7 @@ $("send").onclick = async ()=>{
   if(!canWrite || !db){ note("Akun ini tidak bisa menyimpan ke daftar. Pakai tombol WhatsApp.", true); return; }
   $("send").disabled = true;
   try{
-    await db.collection("orders").add({nama, items:cart, total:sum(cart), by:uid, createdAt:Date.now()});
+    await db.collection("orders").add({nama, items:cart, total:sum(cart), bayar:$("bayar").value, by:uid, createdAt:Date.now()});
     cart=[]; renderCart(); note("Pesanan terkirim.");
   }catch(e){
     note(e && e.code==="invalid_argument" ? "Kamu belum punya izin menulis. Pakai tombol WhatsApp." : "Gagal mengirim, coba lagi.", true);
@@ -147,7 +166,7 @@ $("send").onclick = async ()=>{
 };
 $("wa").onclick = ()=>{
   const nama = checkInput(); if(!nama) return;
-  const t = "PO Ngemil Wak\nNama: "+nama+"\n"+cart.map(c=>"- "+label(c)+" x"+c.qty).join("\n")+"\nTotal: "+fmt(sum(cart));
+  const t = "PO Ngemil Wak\nNama: "+nama+"\n"+cart.map(c=>"- "+label(c)+" x"+c.qty).join("\n")+"\nTotal: "+fmt(sum(cart))+"\nPembayaran: "+($("bayar").value==="QRIS"?"QRIS (bukti bayar saya kirim)":"Tunai saat ambil");
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(t), "_blank");
 };
 
@@ -200,6 +219,7 @@ function renderOrders(){
     const ul=document.createElement("ul"); ul.className="ord";
     (o.items||[]).forEach(it=>{const li=document.createElement("li"); li.textContent=label(it)+" ×"+it.qty; ul.appendChild(li);});
     d.appendChild(ul);
+    if(o.bayar){ const pb=document.createElement("div"); pb.className="mut"; pb.textContent="Bayar: "+o.bayar; d.appendChild(pb); }
     box.appendChild(d);
   });
   const agg = {};
