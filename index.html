@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PO Ngemil Wak</title>
+<style>
+:root{--bg:#fff6cf;--card:#fffdf2;--ink:#4a2a14;--mut:#8a6a50;--acc:#5a2d14;--hi:#f5a31a;--line:#e8d9a8;--ok:#2e7d32;--bad:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#241710;--card:#33221a;--ink:#f6e8cf;--mut:#c4a98b;--acc:#f5a31a;--hi:#f5a31a;--line:#4d3628}}
+:root[data-theme="dark"]{--bg:#241710;--card:#33221a;--ink:#f6e8cf;--mut:#c4a98b;--acc:#f5a31a;--hi:#f5a31a;--line:#4d3628}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{margin:4px 0 0;font-size:26px;color:var(--acc)}
+h1 span{color:var(--hi)}
+.sub{color:var(--mut);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+h2{margin:0 0 10px;font-size:17px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{cursor:pointer;font-weight:600}
+button.p{background:var(--acc);color:var(--card);border-color:var(--acc)}
+:root:not([data-theme="light"]) button.p{color:#2a1a10}
+button.s{width:auto;padding:6px 10px;font-size:13px}
+.cart li,.ord li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+ul{list-style:none;margin:0;padding:0}
+.tot{display:flex;justify-content:space-between;font-weight:700;margin-top:8px}
+.o{border-top:1px solid var(--line);padding:10px 0}
+.o:first-child{border-top:0}
+.oh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mut{color:var(--mut);font-size:13px}
+.msg{font-size:14px;margin-top:8px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td{padding:4px 0;border-bottom:1px dashed var(--line)}
+td:last-child{text-align:right}
+</style>
+</head>
+<body>
+<main>
+<h1>Ngemil<span>Wak</span> <small style="font-size:14px;color:var(--mut)">PO</small></h1>
+<p class="sub" id="sub">Pilih menu, lalu kirim pesananmu lewat WhatsApp.</p>
+
+<section class="card">
+<h2>Buat pesanan</h2>
+<label for="nama">Nama</label>
+<input id="nama" placeholder="Nama kamu" maxlength="40" autocomplete="name">
+<label for="prod">Menu</label>
+<select id="prod"></select>
+<div class="row">
+<div><label for="rasa" id="lrasa">Rasa</label><select id="rasa"></select></div>
+<div><label for="opt" id="lopt">Ukuran</label><select id="opt"></select></div>
+</div>
+<div class="row">
+<div><label for="qty">Jumlah</label><input id="qty" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
+<div><label>&nbsp;</label><button id="add" type="button">+ Tambah item</button></div>
+</div>
+<ul class="cart" id="cart"></ul>
+<div class="tot"><span>Total</span><span id="ctot">Rp0</span></div>
+<div style="display:grid;gap:8px;margin-top:12px">
+<button class="p" id="send" type="button" hidden>Kirim pesanan</button>
+<button class="p" id="wa" type="button">Kirim pesanan lewat WhatsApp</button>
+</div>
+<div class="msg" id="msg"></div>
+</section>
+
+<section class="card" id="sRekap">
+<h2>Rekap per menu</h2>
+<div class="wrap"><table id="rekap"></table></div>
+<div class="tot"><span id="cnt">0 pesanan</span><span id="gtot">Rp0</span></div>
+</section>
+
+<section class="card" id="sList">
+<h2>Daftar pesanan</h2>
+<div id="orders"><p class="mut">Memuat...</p></div>
+</section>
+</main>
+
+<script>
+const WA = "6288270823431";
+const MENU = {
+  "Es Krim Gabin": {rasa:["Oreo","Red Velvet","Regal Cheese"], lr:"Rasa", opt:["250 ml","150 ml"], lo:"Ukuran",
+    price:(r,o)=>(o==="250 ml"?13000:10000)+(r==="Regal Cheese"?2000:0)},
+  "Lumpia Isi Ayam (isi 3)": {rasa:null, opt:["Matang","Frozen"], lo:"Kondisi", price:()=>5000},
+  "Banana Crunch": {rasa:["Coklat","Taro","Strawberry","Matcha"], lr:"Rasa", opt:null, price:()=>7000}
+};
+const $ = id => document.getElementById(id);
+const fmt = n => "Rp" + n.toLocaleString("id-ID");
+let cart = [], orders = [], db = null, uid = null, isAdmin = false, canWrite = false, selMode = false, confirming = false, busy = false, delMsg = "";
+const sel = new Set();
+
+function fill(sel, arr){ sel.textContent=""; (arr||[]).forEach(v=>{const o=document.createElement("option");o.value=o.textContent=v;sel.appendChild(o);}); }
+function setOptions(){
+  const m = MENU[$("prod").value];
+  fill($("rasa"), m.rasa); fill($("opt"), m.opt);
+  $("rasa").parentElement.style.display = m.rasa ? "" : "none";
+  $("opt").parentElement.style.display = m.opt ? "" : "none";
+  if(m.lr) $("lrasa").textContent = m.lr;
+  if(m.lo) $("lopt").textContent = m.lo;
+}
+fill($("prod"), Object.keys(MENU));
+$("prod").addEventListener("change", setOptions); setOptions();
+
+function label(it){ return [it.item, it.rasa, it.opt].filter(Boolean).join(" · "); }
+function sum(items){ return items.reduce((s,i)=>s+i.price*i.qty,0); }
+function note(t, bad){ const m=$("msg"); m.textContent=t; m.style.color = bad?"var(--bad)":"var(--ok)"; }
+
+function renderCart(){
+  const ul = $("cart"); ul.textContent="";
+  cart.forEach((it,i)=>{
+    const li=document.createElement("li");
+    const a=document.createElement("span"); a.textContent = label(it)+" ×"+it.qty+"  "+fmt(it.price*it.qty);
+    const b=document.createElement("button"); b.className="s"; b.textContent="Hapus"; b.onclick=()=>{cart.splice(i,1);renderCart();};
+    li.append(a,b); ul.appendChild(li);
+  });
+  $("ctot").textContent = fmt(sum(cart));
+}
+$("add").onclick = ()=>{
+  const item=$("prod").value, m=MENU[item];
+  const rasa = m.rasa ? $("rasa").value : "", opt = m.opt ? $("opt").value : "";
+  const qty = Math.max(1, Math.min(99, parseInt($("qty").value)||1));
+  const price = m.price(rasa,opt);
+  const ex = cart.find(c=>c.item===item&&c.rasa===rasa&&c.opt===opt);
+  if(ex) ex.qty = Math.min(99, ex.qty+qty); else cart.push({item,rasa,opt,qty,price});
+  $("qty").value=1; renderCart(); note("");
+};
+
+function checkInput(){
+  const nama = $("nama").value.trim();
+  if(!nama){ note("Isi nama dulu.", true); return null; }
+  if(!cart.length){ note("Tambahkan minimal 1 item.", true); return null; }
+  return nama;
+}
+$("send").onclick = async ()=>{
+  const nama = checkInput(); if(!nama) return;
+  if(!canWrite || !db){ note("Akun ini tidak bisa menyimpan ke daftar. Pakai tombol WhatsApp.", true); return; }
+  $("send").disabled = true;
+  try{
+    await db.collection("orders").add({nama, items:cart, total:sum(cart), by:uid, createdAt:Date.now()});
+    cart=[]; renderCart(); note("Pesanan terkirim.");
+  }catch(e){
+    note(e && e.code==="invalid_argument" ? "Kamu belum punya izin menulis. Pakai tombol WhatsApp." : "Gagal mengirim, coba lagi.", true);
+  }
+  $("send").disabled = false;
+};
+$("wa").onclick = ()=>{
+  const nama = checkInput(); if(!nama) return;
+  const t = "PO Ngemil Wak\nNama: "+nama+"\n"+cart.map(c=>"- "+label(c)+" x"+c.qty).join("\n")+"\nTotal: "+fmt(sum(cart));
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(t), "_blank");
+};
+
+function renderOrders(){
+  const box = $("orders"); box.textContent="";
+  const canDel = o => canWrite && db && (isAdmin || (uid && o.by===uid));
+  sel.forEach(id=>{ if(!orders.some(o=>o.id===id)) sel.delete(id); });
+  if(!orders.some(canDel)){ selMode=false; sel.clear(); }
+  if(orders.some(canDel)){
+    const tb=document.createElement("div"); tb.style.cssText="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px";
+    if(!selMode){
+      const b=document.createElement("button"); b.className="s"; b.textContent="Hapus pesanan";
+      b.onclick=()=>{ selMode=true; sel.clear(); renderOrders(); };
+      tb.appendChild(b);
+    } else {
+      const hint=document.createElement("span"); hint.className="mut"; hint.style.flex="1 1 100%"; hint.textContent="Centang pesanan yang mau dihapus.";
+      const ok=document.createElement("button"); ok.className="s p"; ok.disabled=sel.size===0||busy; if(ok.disabled) ok.style.opacity=".5";
+      ok.textContent = confirming ? "Ya, hapus "+sel.size+" pesanan" : "Hapus terpilih ("+sel.size+")";
+      ok.onclick=async()=>{
+        if(!sel.size) return;
+        if(!confirming){ confirming=true; delMsg=""; renderOrders(); return; }
+        busy=true; renderOrders();
+        let fail=0, code="";
+        for(const id of [...sel]){ try{ await db.collection("orders").doc(id).delete(); sel.delete(id); }catch(e){ fail++; code=(e&&e.code)||""; } }
+        busy=false; confirming=false;
+        if(fail){ delMsg = code==="invalid_argument" ? "Kamu tidak punya izin menghapus pesanan ini." : "Gagal menghapus "+fail+" pesanan, coba lagi."; }
+        else { selMode=false; delMsg=""; }
+        renderOrders();
+      };
+      const cc=document.createElement("button"); cc.className="s"; cc.textContent="Batal"; cc.disabled=busy;
+      cc.onclick=()=>{ selMode=false; confirming=false; delMsg=""; sel.clear(); renderOrders(); };
+      tb.append(hint,ok,cc);
+      if(delMsg){ const em=document.createElement("span"); em.style.cssText="flex:1 1 100%;font-size:14px;color:var(--bad)"; em.textContent=delMsg; tb.appendChild(em); }
+    }
+    box.appendChild(tb);
+  }
+  if(!orders.length){ const p=document.createElement("p"); p.className="mut"; p.textContent="Belum ada pesanan."; box.appendChild(p); }
+  orders.forEach((o,idx)=>{
+    const d=document.createElement("div"); d.className="o";
+    const h=document.createElement("div"); h.className="oh";
+    const n=document.createElement("strong"); n.textContent=(idx+1)+". "+o.nama;
+    const r=document.createElement("span"); r.textContent=fmt(o.total);
+    if(selMode && canDel(o)){
+      const c=document.createElement("input"); c.type="checkbox"; c.checked=sel.has(o.id); c.setAttribute("aria-label","Pilih pesanan "+o.nama);
+      c.style.cssText="width:22px;height:22px;padding:0;flex:none";
+      c.onchange=()=>{ if(c.checked) sel.add(o.id); else sel.delete(o.id); confirming=false; renderOrders(); };
+      h.appendChild(c); n.style.flex="1";
+    }
+    h.append(n,r); d.appendChild(h);
+    const ul=document.createElement("ul"); ul.className="ord";
+    (o.items||[]).forEach(it=>{const li=document.createElement("li"); li.textContent=label(it)+" ×"+it.qty; ul.appendChild(li);});
+    d.appendChild(ul);
+    box.appendChild(d);
+  });
+  const agg = {};
+  orders.forEach(o=>(o.items||[]).forEach(it=>{const k=label(it); agg[k]=agg[k]||{q:0,t:0}; agg[k].q+=it.qty; agg[k].t+=it.price*it.qty;}));
+  const t=$("rekap"); t.textContent="";
+  Object.keys(agg).sort().forEach(k=>{
+    const tr=document.createElement("tr");
+    [k, "×"+agg[k].q, fmt(agg[k].t)].forEach((v,i)=>{const td=document.createElement("td"); td.textContent=v; tr.appendChild(td);});
+    t.appendChild(tr);
+  });
+  $("cnt").textContent = orders.length+" pesanan";
+  $("gtot").textContent = fmt(orders.reduce((s,o)=>s+(o.total||0),0));
+}
+
+(async function init(){
+  try{
+    if(window.claude){
+      const user = await claude.use("user");
+      db = await claude.use("db");
+      if(user){ uid = await user.id(); isAdmin = await user.canEdit(); canWrite = (await user.can("data.write")) !== false; }
+      else canWrite = !!db;
+    }
+  }catch(e){ db = null; }
+  const live = !!db && canWrite;
+  $("send").hidden = !live;
+  if(live){ $("wa").classList.remove("p"); $("wa").textContent = "Kirim lewat WhatsApp"; $("sub").textContent = "Isi pesananmu di bawah. Daftar pesanan semua orang tampil otomatis."; }
+  if(db){
+    db.collection("orders").orderBy("createdAt").onSnapshot(
+      snap=>{ orders = snap.docs.map(d=>Object.assign({id:d.id}, d.data())); renderOrders(); },
+      ()=>{ $("orders").textContent="Daftar tidak dapat dimuat."; });
+  } else {
+    $("sRekap").hidden = true; $("sList").hidden = true;
+  }
+})();
+renderCart();
+</script>
+</body>
+</html>
