@@ -1,0 +1,34 @@
+:root{--bg:#fff6cf;--card:#fffdf2;--ink:#4a2a14;--mut:#8a6a50;--acc:#5a2d14;--hi:#f5a31a;--line:#e8d9a8;--ok:#2e7d32;--bad:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#241710;--card:#33221a;--ink:#f6e8cf;--mut:#c4a98b;--acc:#f5a31a;--hi:#f5a31a;--line:#4d3628}}
+:root[data-theme="dark"]{--bg:#241710;--card:#33221a;--ink:#f6e8cf;--mut:#c4a98b;--acc:#f5a31a;--hi:#f5a31a;--line:#4d3628}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{margin:4px 0 0;font-size:26px;color:var(--acc)}
+h1 span{color:var(--hi)}
+.sub{color:var(--mut);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+h2{margin:0 0 10px;font-size:17px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{cursor:pointer;font-weight:600}
+button.p{background:var(--acc);color:var(--card);border-color:var(--acc)}
+:root:not([data-theme="light"]) button.p{color:#2a1a10}
+button.s{width:auto;padding:6px 10px;font-size:13px}
+.cart li,.ord li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+ul{list-style:none;margin:0;padding:0}
+.tot{display:flex;justify-content:space-between;font-weight:700;margin-top:8px}
+.o{border-top:1px solid var(--line);padding:10px 0}
+.o:first-child{border-top:0}
+.oh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mut{color:var(--mut);font-size:13px}
+.msg{font-size:14px;margin-top:8px}
+.qr{margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.qr img{max-width:260px;width:100%;height:auto;border-radius:10px;background:#fff;padding:6px}
+.qr p{margin:6px 0 0}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td{padding:4px 0;border-bottom:1px dashed var(--line)}
+td:last-child{text-align:right}
