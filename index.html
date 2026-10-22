@@ -95,9 +95,10 @@ td:last-child{text-align:right}
 <script>
 const WA = "6288270823431";
 const MENU = {
-  "Es Krim Gabin": {rasa:["Oreo","Red Velvet","Regal Cheese"], lr:"Rasa", opt:["250 ml","150 ml"], lo:"Ukuran",
+  "Es Krim Gabin": {rasa:["Oreo","Red Velvet","Regal Cheese","Coklat"], lr:"Rasa", opt:["250 ml","150 ml"], lo:"Ukuran",
     price:(r,o)=>(o==="250 ml"?13000:10000)+(r==="Regal Cheese"?2000:0)},
   "Lumpia Isi Ayam (isi 3)": {rasa:null, opt:["Matang","Frozen"], lo:"Kondisi", price:()=>5000},
+  "Lumpia Bakso Mercon (isi 5)": {rasa:null, opt:["Matang","Frozen"], lo:"Kondisi", price:()=>10000},
   "Banana Crunch": {rasa:["Coklat","Taro","Strawberry","Matcha"], lr:"Rasa", opt:null, price:()=>7000}
 };
 const $ = id => document.getElementById(id);
